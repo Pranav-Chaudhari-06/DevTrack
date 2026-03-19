@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Environment variables — never commit secrets
+server/.env
+client/.env
+
+# Python
+bug-service/__pycache__/
+bug-service/analyzer/__pycache__/
+bug-service/bug_service/__pycache__/
+bug-service/*.pyc
+bug-service/db.sqlite3
+bug-service/venv/
+bug-service/.venv/
+*.pyc
+__pycache__/
+
+# Build output
+client/dist/
+client/.vite/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Sensitive files
+*.txt
+Dev-Track Password.txt
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Claude Code
+.claude/
