@@ -207,7 +207,7 @@ Make sure all three apps run independently and communicate correctly. Add commen
 ### 1. Fill in your MongoDB URI
 Open `server/.env` and replace `<user will fill this>` with your MongoDB connection string. If using MongoDB Atlas (cloud), it looks like:
 ```
-MONGO_URI=mongodb+srv://youruser:yourpassword@cluster0.xxxxx.mongodb.net/devtrack
+MONGO_URI=<your-mongodb-atlas-connection-string>
 ```
 
 ### 2. Run all three services

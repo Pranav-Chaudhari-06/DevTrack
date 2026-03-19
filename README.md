@@ -58,8 +58,8 @@ devtrack/
 **server/.env** — fill in your MongoDB URI:
 ```
 PORT=5000
-MONGO_URI=mongodb+srv://user:password@cluster0.xxxxx.mongodb.net/devtrack
-JWT_SECRET=devtrack_secret_key_2024
+MONGO_URI=<your-mongodb-atlas-connection-string>
+JWT_SECRET=<your-jwt-secret>
 BUG_SERVICE_URL=http://localhost:8000
 ```
 
