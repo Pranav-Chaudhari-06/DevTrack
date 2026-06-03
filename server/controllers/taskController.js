@@ -1,4 +1,5 @@
 const axios = require('axios');
+const mongoose = require('mongoose');
 const Task = require('../models/Task');
 const Project = require('../models/Project');
 const User = require('../models/User');
@@ -185,23 +186,23 @@ const addComment = async (req, res) => {
   try {
     const author = await User.findById(req.user.id);
 
+    // Construct the comment with its _id up front so we can return *this* comment
+    // — using comments[length-1] races with concurrent $pushes from other requests.
+    const newComment = {
+      _id:        new mongoose.Types.ObjectId(),
+      author:     req.user.id,
+      authorName: author.name,
+      text:       text.trim(),
+      createdAt:  new Date(),
+    };
+
     const task = await Task.findByIdAndUpdate(
       req.params.taskId,
-      {
-        $push: {
-          comments: {
-            author: req.user.id,
-            authorName: author.name,
-            text: text.trim(),
-          },
-        },
-      },
-      { new: true }
+      { $push: { comments: newComment } },
+      { new: false }
     );
 
     if (!task) return res.status(404).json({ message: 'Task not found' });
-
-    const newComment = task.comments[task.comments.length - 1];
 
     // ── Notify assignee of new comment ────────────────────────────────────
     if (task.assignedTo) {
