@@ -109,7 +109,7 @@ const getAnalytics = async (req, res) => {
       assigneeDist,
     });
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'analyticsController error');
     res.status(500).json({ message: 'Server error' });
   }
 };

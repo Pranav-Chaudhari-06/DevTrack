@@ -5,14 +5,17 @@ const cors           = require('cors');
 const helmet         = require('helmet');
 const cookieParser   = require('cookie-parser');
 const mongoSanitize  = require('express-mongo-sanitize');
+const pinoHttp       = require('pino-http');
 const { Server }     = require('socket.io');
 require('dotenv').config();
+
+const logger = require('./lib/logger');
 
 // ── Validate required environment variables on startup ───────────────────────
 const REQUIRED_ENV = ['MONGO_URI', 'JWT_SECRET'];
 const missing = REQUIRED_ENV.filter((key) => !process.env[key]);
 if (missing.length) {
-  console.error(`Missing required environment variables: ${missing.join(', ')}`);
+  logger.fatal({ missing }, 'Missing required environment variables');
   process.exit(1);
 }
 
@@ -43,6 +46,7 @@ socketManager.init(io);
 app.set('trust proxy', 1);
 
 // ── Express middleware ──────────────────────────────────────────────────────
+app.use(pinoHttp({ logger }));   // attaches req.id and req.log to every request
 app.use(helmet());
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(cookieParser());
@@ -71,7 +75,7 @@ app.get('/', (req, res) => res.json({ message: 'DevTrack API is running' }));
 // ── Central error handler ─────────────────────────────────────────────────────
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  console.error(`[${new Date().toISOString()}] Unhandled error:`, err);
+  (req.log || logger).error({ err }, 'Unhandled error');
   res.status(500).json({ message: 'An unexpected error occurred' });
 });
 
@@ -81,17 +85,17 @@ const PORT = process.env.PORT || 5000;
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
-    console.log('Connected to MongoDB');
-    httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    logger.info('Connected to MongoDB');
+    httpServer.listen(PORT, () => logger.info({ port: PORT }, 'Server listening'));
   })
   .catch((err) => {
-    console.error('MongoDB connection error:', err.message);
+    logger.fatal({ err }, 'MongoDB connection error');
     process.exit(1);
   });
 
 httpServer.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use. Kill the other process first:\n  Run: netstat -ano | findstr :${PORT}\n  Then: taskkill /PID <pid> /F`);
+    logger.fatal({ port: PORT }, 'Port already in use — kill the other process first');
     process.exit(1);
   }
   throw err;
@@ -99,7 +103,7 @@ httpServer.on('error', (err) => {
 
 // ── Graceful shutdown ─────────────────────────────────────────────────────────
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received — shutting down gracefully');
+  logger.info('SIGTERM received — shutting down gracefully');
   httpServer.close(() => {
     mongoose.connection.close(false, () => process.exit(0));
   });

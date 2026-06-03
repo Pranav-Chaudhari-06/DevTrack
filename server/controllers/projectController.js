@@ -21,7 +21,7 @@ const createProject = async (req, res) => {
 
     res.status(201).json(project);
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'projectController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -54,7 +54,7 @@ const getProjects = async (req, res) => {
 
     res.json(projectsWithMeta);
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'projectController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -78,7 +78,7 @@ const getProjectById = async (req, res) => {
 
     res.json({ ...project.toObject(), myRole: member?.role });
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'projectController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -90,7 +90,7 @@ const deleteProject = async (req, res) => {
     await Project.findByIdAndDelete(req.params.id);
     res.json({ message: 'Project deleted successfully' });
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'projectController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -109,7 +109,7 @@ const getMembers = async (req, res) => {
 
     res.json(project.members);
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'projectController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -155,7 +155,7 @@ const inviteMember = async (req, res) => {
 
     res.status(201).json(newMember);
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'projectController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -197,7 +197,7 @@ const updateMemberRole = async (req, res) => {
 
     res.json({ userId: req.params.userId, role });
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'projectController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -231,7 +231,7 @@ const removeMember = async (req, res) => {
 
     res.json({ message: 'Member removed successfully' });
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'projectController error');
     res.status(500).json({ message: 'Server error' });
   }
 };

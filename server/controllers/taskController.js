@@ -74,7 +74,7 @@ const createTask = async (req, res) => {
           taskData.priority = severityToPriority[analysisRes.data.severity] || 'medium';
         }
       } catch (bugErr) {
-        console.warn('Bug analysis service unavailable:', bugErr.message);
+        req.log.warn({ err: bugErr }, 'Bug analysis service unavailable');
       }
     }
 
@@ -92,7 +92,7 @@ const createTask = async (req, res) => {
 
     res.status(201).json(task);
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'taskController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -103,7 +103,7 @@ const getTasksByProject = async (req, res) => {
     const tasks = await Task.find({ project: req.params.id }).sort({ createdAt: -1 });
     res.json(tasks);
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'taskController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -173,7 +173,7 @@ const updateTask = async (req, res) => {
 
     res.json(task);
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'taskController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -184,7 +184,7 @@ const deleteTask = async (req, res) => {
     await Task.findByIdAndDelete(req.params.taskId);
     res.json({ message: 'Task deleted successfully' });
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'taskController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -228,7 +228,7 @@ const addComment = async (req, res) => {
 
     res.status(201).json(newComment);
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'taskController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -240,7 +240,7 @@ const getComments = async (req, res) => {
     if (!task) return res.status(404).json({ message: 'Task not found' });
     res.json(task.comments);
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'taskController error');
     res.status(500).json({ message: 'Server error' });
   }
 };

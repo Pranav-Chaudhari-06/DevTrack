@@ -9,6 +9,7 @@
 
 const jwt = require('jsonwebtoken');
 const Notification = require('./models/Notification');
+const logger = require('./lib/logger');
 
 let io;
 
@@ -82,7 +83,7 @@ async function notifyUser(recipientId, { message, type, projectId, taskId }) {
     return notif;
   } catch (err) {
     // Notifications are non-critical — log but don't crash the request
-    console.error('Failed to create notification:', err.message);
+    logger.error({ err, recipientId: recipientId?.toString?.() }, 'Failed to create notification');
   }
 }
 

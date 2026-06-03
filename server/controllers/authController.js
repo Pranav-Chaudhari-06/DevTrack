@@ -70,15 +70,14 @@ const register = async (req, res) => {
     try {
       await sendVerificationEmail(normalisedEmail, name, verificationToken);
     } catch (emailErr) {
-      console.warn('[register] Email delivery failed — verify manually via this URL:');
-      console.warn(verifyUrl);
+      req.log.warn({ err: emailErr, verifyUrl }, '[register] Email delivery failed — verify manually via the logged URL');
     }
 
     res.status(201).json({
       message: 'Account created! Please check your email to verify your account before signing in.',
     });
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'authController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -144,7 +143,7 @@ const login = async (req, res) => {
       user:  { id: user._id, name: user.name, email: user.email },
     });
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'authController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -204,7 +203,7 @@ const refresh = async (req, res) => {
       user:  { id: user._id, name: user.name, email: user.email },
     });
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'authController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -239,7 +238,7 @@ const verifyEmail = async (req, res) => {
 
     res.json({ message: 'Email verified! You can now sign in.' });
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'authController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -264,7 +263,7 @@ const forgotPassword = async (req, res) => {
 
     res.json(SAFE_RESPONSE);
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'authController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -296,7 +295,7 @@ const resetPassword = async (req, res) => {
 
     res.json({ message: 'Password updated successfully. You can now sign in.' });
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, 'authController error');
     res.status(500).json({ message: 'Server error' });
   }
 };
