@@ -136,7 +136,9 @@ const login = async (req, res) => {
       await user.save();
     }
 
-    // Issue tokens
+    // Issue tokens — fresh familyId starts a new lineage of refresh tokens
+    // for this login. Every rotation keeps the same familyId so reuse
+    // detection can nuke the whole tree if a stolen token is ever replayed.
     const accessToken  = signAccess(user);
     const refreshToken = crypto.randomBytes(64).toString('hex');
 
@@ -144,6 +146,7 @@ const login = async (req, res) => {
       userId:    user._id,
       tokenHash: hashToken(refreshToken),
       expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
+      familyId:  new mongoose.Types.ObjectId(),
     });
 
     setRefreshCookie(res, refreshToken);
@@ -171,6 +174,19 @@ const refresh = async (req, res) => {
       return res.status(401).json({ message: 'Refresh token invalid or expired' });
     }
 
+    // Reuse detection: a token that was already rotated is being replayed.
+    // Treat the whole family as compromised — nuke every descendant so the
+    // attacker and the legitimate user are both forced to re-authenticate.
+    if (stored.revoked) {
+      if (stored.familyId) {
+        await RefreshToken.deleteMany({ familyId: stored.familyId });
+      } else {
+        await RefreshToken.deleteOne({ _id: stored._id });
+      }
+      res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
+      return res.status(401).json({ message: 'Refresh token reuse detected — please sign in again' });
+    }
+
     const user = await User.findById(stored.userId);
     if (!user) {
       await RefreshToken.deleteOne({ _id: stored._id });
@@ -178,13 +194,19 @@ const refresh = async (req, res) => {
       return res.status(401).json({ message: 'User not found' });
     }
 
-    // Rotate: delete old refresh token, issue a new one
-    await RefreshToken.deleteOne({ _id: stored._id });
+    // Rotate: mark the old token revoked (so a future replay trips
+    // reuse-detection) and issue a new one in the same family.
+    stored.revoked = true;
+    await stored.save();
+
     const newRefreshToken = crypto.randomBytes(64).toString('hex');
     await RefreshToken.create({
       userId:    user._id,
       tokenHash: hashToken(newRefreshToken),
       expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
+      // Pre-existing tokens issued before this commit have no familyId; mint
+      // one so future reuse detection on their descendants works correctly.
+      familyId:  stored.familyId || new mongoose.Types.ObjectId(),
     });
 
     setRefreshCookie(res, newRefreshToken);
