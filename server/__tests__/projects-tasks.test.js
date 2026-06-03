@@ -103,7 +103,9 @@ describe('Tasks', () => {
     const list = await request(app).get(`/api/projects/${project._id}/tasks`)
       .set(bearer(developer.accessToken));
     expect(list.status).toBe(200);
-    expect(list.body).toHaveLength(1);
+    expect(list.body.tasks).toHaveLength(1);
+    expect(list.body.total).toBe(1);
+    expect(list.body.hasMore).toBe(false);
   });
 
   test('viewer cannot create tasks (403)', async () => {
@@ -164,7 +166,32 @@ describe('Tasks', () => {
 
     const list = await request(app).get(`/api/projects/${project._id}/tasks`)
       .set(bearer(admin.accessToken));
-    expect(list.body).toHaveLength(0);
+    expect(list.body.tasks).toHaveLength(0);
+    expect(list.body.total).toBe(0);
+  });
+
+  test('pagination caps page size, returns total + hasMore', async () => {
+    for (let i = 0; i < 5; i++) {
+      await request(app).post(`/api/projects/${project._id}/tasks`)
+        .set(bearer(admin.accessToken))
+        .send({ title: `Task ${i}`, assignedTo: developer.user.id });
+    }
+
+    const first = await request(app).get(`/api/projects/${project._id}/tasks?page=1&limit=2`)
+      .set(bearer(admin.accessToken));
+    expect(first.body.tasks).toHaveLength(2);
+    expect(first.body.total).toBe(5);
+    expect(first.body.hasMore).toBe(true);
+
+    const third = await request(app).get(`/api/projects/${project._id}/tasks?page=3&limit=2`)
+      .set(bearer(admin.accessToken));
+    expect(third.body.tasks).toHaveLength(1);
+    expect(third.body.hasMore).toBe(false);
+
+    // limit is capped at 200 — asking for 1000 returns the capped value
+    const capped = await request(app).get(`/api/projects/${project._id}/tasks?limit=1000`)
+      .set(bearer(admin.accessToken));
+    expect(capped.body.limit).toBe(200);
   });
 
   test('any project member can post a comment; addComment returns the same doc that was inserted', async () => {

@@ -97,11 +97,28 @@ const createTask = async (req, res) => {
   }
 };
 
-// GET /api/projects/:id/tasks   [any role]
+// GET /api/projects/:id/tasks?page=1&limit=50   [any role]
 const getTasksByProject = async (req, res) => {
+  // Bound the page size so a client (or a bug) can't ask for every task in
+  // the project in one shot. Default of 50 covers a typical kanban view.
+  const page  = Math.max(1, parseInt(req.query.page,  10) || 1);
+  const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50));
+  const skip  = (page - 1) * limit;
+
   try {
-    const tasks = await Task.find({ project: req.params.id }).sort({ createdAt: -1 });
-    res.json(tasks);
+    const filter = { project: req.params.id };
+    const [tasks, total] = await Promise.all([
+      Task.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Task.countDocuments(filter),
+    ]);
+
+    res.json({
+      tasks,
+      page,
+      limit,
+      total,
+      hasMore: skip + tasks.length < total,
+    });
   } catch (err) {
     req.log.error({ err }, 'taskController error');
     res.status(500).json({ message: 'Server error' });

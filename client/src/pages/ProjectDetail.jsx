@@ -54,7 +54,7 @@ export default function ProjectDetail() {
       ]);
       setProject(projRes.data);
       setMyRole(projRes.data.myRole);     // comes from the server response
-      setTasks(taskRes.data);
+      setTasks(taskRes.data.tasks);        // paginated response: { tasks, page, limit, total, hasMore }
     } catch (err) {
       console.error('Failed to load project:', err);
     } finally {
