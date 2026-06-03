@@ -10,7 +10,8 @@ const getNotifications = async (req, res) => {
 
     res.json(notifications);
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -26,7 +27,8 @@ const markAsRead = async (req, res) => {
     if (!notif) return res.status(404).json({ message: 'Notification not found' });
     res.json(notif);
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -36,7 +38,8 @@ const markAllRead = async (req, res) => {
     await Notification.updateMany({ user: req.user.id, read: false }, { read: true });
     res.json({ message: 'All notifications marked as read' });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 

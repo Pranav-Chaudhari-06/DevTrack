@@ -1,30 +1,49 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import api from '../api/axios';
+import { setToken, onUnauthenticated } from '../utils/tokenStore';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem('devtrack_token'));
-  const [user, setUser] = useState(() => {
-    const u = localStorage.getItem('devtrack_user');
-    return u ? JSON.parse(u) : null;
-  });
+  const [user,    setUser]    = useState(null);
+  const [loading, setLoading] = useState(true); // true while we attempt silent refresh on mount
 
-  const login = (token, user) => {
-    localStorage.setItem('devtrack_token', token);
-    localStorage.setItem('devtrack_user', JSON.stringify(user));
+  // ── On mount: restore session using the httpOnly refresh cookie ──────────
+  useEffect(() => {
+    api.post('/api/auth/refresh')
+      .then(({ data }) => {
+        setToken(data.token);
+        setUser(data.user);
+      })
+      .catch(() => {
+        // No valid session — that's fine, user will see login page
+        setToken(null);
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  // ── When the access token expires mid-session, clear state ──────────────
+  useEffect(() => {
+    onUnauthenticated(() => {
+      setToken(null);
+      setUser(null);
+    });
+  }, []);
+
+  const login = (token, userData) => {
     setToken(token);
-    setUser(user);
+    setUser(userData);
   };
 
-  const logout = () => {
-    localStorage.removeItem('devtrack_token');
-    localStorage.removeItem('devtrack_user');
+  const logout = async () => {
+    try { await api.post('/api/auth/logout'); } catch { /* best effort */ }
     setToken(null);
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

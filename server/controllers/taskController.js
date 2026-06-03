@@ -5,6 +5,13 @@ const User = require('../models/User');
 const { notifyUser } = require('../socket');
 
 /**
+ * Escape special RegExp characters to prevent ReDoS / injection attacks.
+ */
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * Given an assignedTo string (name or email), find the matching User document.
  * Returns null if not found or if the string is empty.
  */
@@ -14,7 +21,7 @@ async function findAssignee(assignedTo) {
   return User.findOne({
     $or: [
       { email: val },
-      { name: { $regex: new RegExp(`^${val}$`, 'i') } },
+      { name: { $regex: new RegExp(`^${escapeRegExp(val)}$`, 'i') } },
     ],
   });
 }
@@ -73,7 +80,8 @@ const createTask = async (req, res) => {
 
     res.status(201).json(task);
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -83,7 +91,8 @@ const getTasksByProject = async (req, res) => {
     const tasks = await Task.find({ project: req.params.id }).sort({ createdAt: -1 });
     res.json(tasks);
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -152,7 +161,8 @@ const updateTask = async (req, res) => {
 
     res.json(task);
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -162,7 +172,8 @@ const deleteTask = async (req, res) => {
     await Task.findByIdAndDelete(req.params.taskId);
     res.json({ message: 'Task deleted successfully' });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -208,7 +219,8 @@ const addComment = async (req, res) => {
 
     res.status(201).json(newComment);
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -219,7 +231,8 @@ const getComments = async (req, res) => {
     if (!task) return res.status(404).json({ message: 'Task not found' });
     res.json(task.comments);
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 

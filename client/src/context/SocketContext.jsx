@@ -1,19 +1,20 @@
 import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
+import { getToken } from '../utils/tokenStore';
 import api from '../api/axios';
 
 const SocketContext = createContext(null);
 
 export function SocketProvider({ children }) {
-  const { token } = useAuth();
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount]     = useState(0);
   const socketRef = useRef(null);
 
   // ── Fetch persisted notifications from MongoDB on login ──────────────────
   useEffect(() => {
-    if (!token) {
+    if (!user) {
       setNotifications([]);
       setUnreadCount(0);
       return;
@@ -25,11 +26,11 @@ export function SocketProvider({ children }) {
         setUnreadCount(data.filter((n) => !n.read).length);
       })
       .catch(console.error);
-  }, [token]);
+  }, [user]);
 
-  // ── Socket connection — reconnect whenever token changes ─────────────────
+  // ── Socket connection — reconnect whenever user changes ──────────────────
   useEffect(() => {
-    if (!token) {
+    if (!user) {
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
@@ -38,7 +39,7 @@ export function SocketProvider({ children }) {
     }
 
     const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
-      auth: { token },
+      auth: { token: getToken() },
       reconnectionAttempts: 5,
     });
 
@@ -56,7 +57,7 @@ export function SocketProvider({ children }) {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [token]);
+  }, [user]);
 
   // ── Helpers exposed to consumers ──────────────────────────────────────────
   const markAsRead = async (id) => {
