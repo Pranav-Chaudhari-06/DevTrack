@@ -1,12 +1,6 @@
-const http           = require('http');
-const express        = require('express');
-const mongoose       = require('mongoose');
-const cors           = require('cors');
-const helmet         = require('helmet');
-const cookieParser   = require('cookie-parser');
-const mongoSanitize  = require('express-mongo-sanitize');
-const pinoHttp       = require('pino-http');
-const { Server }     = require('socket.io');
+const http      = require('http');
+const mongoose  = require('mongoose');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
 const logger = require('./lib/logger');
@@ -19,65 +13,21 @@ if (missing.length) {
   process.exit(1);
 }
 
-const authRoutes         = require('./routes/auth');
-const projectRoutes      = require('./routes/projects');
-const taskRoutes         = require('./routes/tasks');
-const notificationRoutes = require('./routes/notifications');
-const analyticsRoutes    = require('./routes/analytics');
-const socketManager      = require('./socket');
+const buildApp      = require('./app');
+const socketManager = require('./socket');
 
-const app        = express();
+const app        = buildApp();
 const httpServer = http.createServer(app);
 
-// ── Allowed origins (comma-separated in env) ─────────────────────────────────
+// Mirror app.js's allowed-origins parsing so Socket.io shares the same policy.
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173')
   .split(',')
   .map((o) => o.trim());
 
-// ── Socket.io ──────────────────────────────────────────────────────────────
 const io = new Server(httpServer, {
   cors: { origin: allowedOrigins, methods: ['GET', 'POST'] },
 });
 socketManager.init(io);
-
-// Trust the first proxy hop (Render/Vercel/Fly/Nginx) so express-rate-limit
-// reads the real client IP from X-Forwarded-For instead of treating every
-// request as coming from the proxy.
-app.set('trust proxy', 1);
-
-// ── Express middleware ──────────────────────────────────────────────────────
-app.use(pinoHttp({ logger }));   // attaches req.id and req.log to every request
-app.use(helmet());
-app.use(cors({ origin: allowedOrigins, credentials: true }));
-app.use(cookieParser());
-app.use(express.json({ limit: '1mb' }));
-// Strip MongoDB operator keys ($gt, $ne, ...) and dotted keys from incoming
-// req.body / req.query / req.params so an attacker can't smuggle a query
-// operator where a string is expected (e.g. { email: { $gt: '' } }).
-app.use(mongoSanitize());
-
-// ── REST routes ─────────────────────────────────────────────────────────────
-app.use('/api/auth',          authRoutes);
-app.use('/api/projects',      projectRoutes);
-app.use('/api/tasks',         taskRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/analytics',    analyticsRoutes);
-
-// ── Health check ─────────────────────────────────────────────────────────────
-app.get('/health', (req, res) => {
-  const dbState = mongoose.connection.readyState; // 1 = connected
-  if (dbState === 1) return res.json({ status: 'healthy' });
-  res.status(503).json({ status: 'unhealthy', db: dbState });
-});
-
-app.get('/', (req, res) => res.json({ message: 'DevTrack API is running' }));
-
-// ── Central error handler ─────────────────────────────────────────────────────
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
-  (req.log || logger).error({ err }, 'Unhandled error');
-  res.status(500).json({ message: 'An unexpected error occurred' });
-});
 
 // ── Start ────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
