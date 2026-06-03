@@ -36,4 +36,7 @@ const projectSchema = new mongoose.Schema({
   },
 });
 
+// getProjects matches on 'members.user' for every dashboard load.
+projectSchema.index({ 'members.user': 1 });
+
 module.exports = mongoose.model('Project', projectSchema);

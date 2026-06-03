@@ -73,4 +73,9 @@ const taskSchema = new mongoose.Schema({
   },
 });
 
+// Covers the two hot read paths:
+//  - listing/aggregating tasks for one project (always sorted newest-first)
+//  - counting tasks per project for the dashboard project list
+taskSchema.index({ project: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Task', taskSchema);
