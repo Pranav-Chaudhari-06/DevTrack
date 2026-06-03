@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api/axios';
 
 const IconX = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
   </svg>
 );
 const IconSearch = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg aria-hidden="true" focusable="false" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
   </svg>
 );
@@ -33,6 +33,13 @@ export default function CreateTaskModal({ projectId, members = [], onClose, onCr
   const [creating, setCreating] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
+
+  // Close on Escape — standard modal keyboard contract.
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -92,6 +99,9 @@ export default function CreateTaskModal({ projectId, members = [], onClose, onCr
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-task-title"
         className="w-full max-w-lg rounded-2xl animate-scale-in flex flex-col max-h-[90vh]"
         style={{
           background: '#0d1530',
@@ -104,9 +114,10 @@ export default function CreateTaskModal({ projectId, members = [], onClose, onCr
           className="flex items-center justify-between px-6 py-4 flex-shrink-0"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
         >
-          <h2 className="text-base font-semibold text-slate-100">Add Task / Bug</h2>
+          <h2 id="create-task-title" className="text-base font-semibold text-slate-100">Add Task / Bug</h2>
           <button
             onClick={onClose}
+            aria-label="Close dialog"
             className="text-slate-600 hover:text-slate-300 transition rounded-lg p-1 hover:bg-white/5"
           >
             <IconX />

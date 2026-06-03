@@ -3,12 +3,12 @@ import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
 const IconX = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
   </svg>
 );
 const IconSend = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg aria-hidden="true" focusable="false" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="22" y1="2" x2="11" y2="13"/>
     <polygon points="22 2 15 22 11 13 2 9 22 2"/>
   </svg>
@@ -36,6 +36,13 @@ export default function TaskCommentModal({ task, onClose }) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [comments]);
+
+  // Close on Escape — standard modal keyboard contract.
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -65,6 +72,9 @@ export default function TaskCommentModal({ task, onClose }) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="comment-modal-title"
         className="w-full max-w-lg rounded-2xl flex flex-col animate-scale-in"
         style={{
           background: '#0d1530',
@@ -80,10 +90,11 @@ export default function TaskCommentModal({ task, onClose }) {
         >
           <div className="flex-1 min-w-0 pr-4">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Comments</p>
-            <h3 className="text-sm font-semibold text-slate-200 truncate">{task.title}</h3>
+            <h3 id="comment-modal-title" className="text-sm font-semibold text-slate-200 truncate">{task.title}</h3>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close comments"
             className="text-slate-600 hover:text-slate-300 transition rounded-lg p-1 hover:bg-white/5 flex-shrink-0"
           >
             <IconX />
@@ -152,6 +163,7 @@ export default function TaskCommentModal({ task, onClose }) {
             <button
               type="submit"
               disabled={submitting || !text.trim()}
+              aria-label="Send comment"
               className="btn-primary px-3 py-2 rounded-xl flex-shrink-0 flex items-center justify-center"
               style={{ height: '40px', width: '40px' }}
               title="Send"

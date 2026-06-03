@@ -15,12 +15,12 @@ const SEVERITY_CONFIG = {
 };
 
 const IconComment = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg aria-hidden="true" focusable="false" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
   </svg>
 );
 const IconTrash = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg aria-hidden="true" focusable="false" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="3 6 5 6 21 6"/>
     <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
     <path d="M10 11v6"/><path d="M14 11v6"/>
@@ -184,6 +184,7 @@ export default function TaskCard({ task, myRole, currentUser, onStatusChange, on
           {isAdmin && (
             <button
               onClick={() => onDelete(task._id)}
+              aria-label={`Delete task: ${task.title}`}
               className="text-slate-700 hover:text-red-400 transition-colors duration-150 p-1 rounded"
               title="Delete task (Admin only)"
             >
@@ -200,6 +201,7 @@ export default function TaskCard({ task, myRole, currentUser, onStatusChange, on
       >
         <button
           onClick={() => setShowComments(true)}
+          aria-label={commentCount > 0 ? `Open ${commentCount} comment${commentCount !== 1 ? 's' : ''} on ${task.title}` : `Add a comment to ${task.title}`}
           className="flex items-center gap-1.5 text-xs transition-colors duration-150"
           style={{ color: commentCount > 0 ? '#818cf8' : '#475569' }}
           onMouseEnter={(e) => e.currentTarget.style.color = '#a5b4fc'}
