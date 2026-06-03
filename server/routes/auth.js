@@ -14,21 +14,25 @@ const {
   verifyEmailQuerySchema,
 } = require('../schemas/auth');
 
-// 10 attempts per 15 min per IP — covers brute-force on login + register
+// 10 attempts per 15 min per IP — covers brute-force on login + register.
+// Skipped in tests so the suite isn't tripping over its own shared IP.
+const skipInTest  = () => process.env.NODE_ENV === 'test';
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   standardHeaders: true,
   legacyHeaders:   false,
+  skip:            skipInTest,
   message: { message: 'Too many attempts from this IP, please try again in 15 minutes' },
 });
 
-// Tighter limit for password reset to prevent email flooding
+// Tighter limit for password reset to prevent email flooding.
 const resetLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
   standardHeaders: true,
   legacyHeaders:   false,
+  skip:            skipInTest,
   message: { message: 'Too many reset requests, please try again in an hour' },
 });
 

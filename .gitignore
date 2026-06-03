@@ -22,6 +22,9 @@ __pycache__/
 client/dist/
 client/.vite/
 
+# Test artifacts
+server/coverage/
+
 # OS
 .DS_Store
 Thumbs.db
