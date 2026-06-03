@@ -11,6 +11,11 @@ const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{
 const REFRESH_COOKIE = 'devtrack_refresh';
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+// Per-account login throttle: after MAX_FAILED_ATTEMPTS consecutive wrong
+// passwords, lock the account for LOCKOUT_MS.
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_MS          = 30 * 60 * 1000; // 30 min
+
 /** SHA-256 hash — used to store tokens safely in the DB. */
 function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -95,14 +100,41 @@ const login = async (req, res) => {
     return res.status(400).json({ message: 'Email and password are required' });
 
   try {
-    const user  = await User.findOne({ email: email.toLowerCase().trim() });
-    const match = user ? await bcrypt.compare(password, user.password) : false;
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
 
-    if (!user || !match)
+    // Reject unknown email without any DB write — preserves enumeration
+    // resistance and avoids racking up a lockout on a non-existent account.
+    if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+
+    // Account locked? Tell the user when they can try again.
+    if (user.lockoutUntil && user.lockoutUntil > new Date()) {
+      const minutes = Math.ceil((user.lockoutUntil - new Date()) / 60000);
+      return res.status(429).json({
+        message: `Account temporarily locked due to repeated failed logins. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`,
+      });
+    }
+
+    const match = await bcrypt.compare(password, user.password);
+
+    if (!match) {
+      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+      if (user.failedLoginAttempts >= MAX_FAILED_ATTEMPTS) {
+        user.lockoutUntil        = new Date(Date.now() + LOCKOUT_MS);
+        user.failedLoginAttempts = 0;
+      }
+      await user.save();
       return res.status(401).json({ message: 'Invalid credentials' });
+    }
 
     if (!user.emailVerified)
       return res.status(403).json({ message: 'Please verify your email before signing in.' });
+
+    // Successful login — clear any partial failure state.
+    if (user.failedLoginAttempts || user.lockoutUntil) {
+      user.failedLoginAttempts = 0;
+      user.lockoutUntil        = null;
+      await user.save();
+    }
 
     // Issue tokens
     const accessToken  = signAccess(user);
@@ -252,6 +284,10 @@ const resetPassword = async (req, res) => {
     user.password                 = await bcrypt.hash(password, 10);
     user.passwordResetToken       = undefined;
     user.passwordResetTokenExpiry = undefined;
+    // Clear any account lockout: a user who completed the email-token flow
+    // has proven enough to sign in fresh.
+    user.failedLoginAttempts      = 0;
+    user.lockoutUntil             = null;
     await user.save();
 
     // Invalidate all existing refresh tokens for this user

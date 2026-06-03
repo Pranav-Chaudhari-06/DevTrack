@@ -29,6 +29,11 @@ const userSchema = new mongoose.Schema({
   verificationTokenExpiry: { type: Date },
   passwordResetToken:       { type: String },
   passwordResetTokenExpiry: { type: Date },
+  // Per-account brute-force throttle. The IP-based limiter still applies,
+  // but an attacker rotating IPs would otherwise be able to grind on a
+  // single account indefinitely.
+  failedLoginAttempts: { type: Number, default: 0 },
+  lockoutUntil:        { type: Date,   default: null },
   createdAt: {
     type: Date,
     default: Date.now,
