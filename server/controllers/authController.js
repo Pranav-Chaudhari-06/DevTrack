@@ -3,7 +3,7 @@ const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const User         = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
-const { sendVerificationEmail } = require('../utils/email');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/email');
 
 const EMAIL_REGEX    = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
@@ -104,6 +104,7 @@ const login = async (req, res) => {
     if (!user.emailVerified)
       return res.status(403).json({ message: 'Please verify your email before signing in.' });
 
+    // Issue tokens
     const accessToken  = signAccess(user);
     const refreshToken = crypto.randomBytes(64).toString('hex');
 
@@ -202,4 +203,65 @@ const verifyEmail = async (req, res) => {
   }
 };
 
-module.exports = { register, login, refresh, logout, verifyEmail };
+// ── POST /api/auth/forgot-password ───────────────────────────────────────────
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ message: 'Email is required' });
+
+  // Always return the same message to prevent email enumeration
+  const SAFE_RESPONSE = { message: 'If an account with that email exists, a reset link has been sent.' };
+
+  try {
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) return res.json(SAFE_RESPONSE);
+
+    const resetToken       = crypto.randomBytes(32).toString('hex');
+    user.passwordResetToken       = hashToken(resetToken);
+    user.passwordResetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1h
+    await user.save();
+
+    await sendPasswordResetEmail(user.email, user.name, resetToken);
+
+    res.json(SAFE_RESPONSE);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// ── POST /api/auth/reset-password ────────────────────────────────────────────
+const resetPassword = async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password)
+    return res.status(400).json({ message: 'Token and new password are required' });
+
+  if (!PASSWORD_REGEX.test(password))
+    return res.status(400).json({
+      message: 'Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character',
+    });
+
+  try {
+    const user = await User.findOne({
+      passwordResetToken:       hashToken(token),
+      passwordResetTokenExpiry: { $gt: new Date() },
+    });
+
+    if (!user)
+      return res.status(400).json({ message: 'Reset link is invalid or has expired.' });
+
+    user.password                 = await bcrypt.hash(password, 10);
+    user.passwordResetToken       = undefined;
+    user.passwordResetTokenExpiry = undefined;
+    await user.save();
+
+    // Invalidate all existing refresh tokens for this user
+    await RefreshToken.deleteMany({ userId: user._id });
+
+    res.json({ message: 'Password updated successfully. You can now sign in.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = { register, login, refresh, logout, verifyEmail, forgotPassword, resetPassword };

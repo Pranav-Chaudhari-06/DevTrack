@@ -3,7 +3,7 @@ const rateLimit  = require('express-rate-limit');
 const router     = express.Router();
 const {
   register, login, refresh, logout,
-  verifyEmail,
+  verifyEmail, forgotPassword, resetPassword,
 } = require('../controllers/authController');
 
 // 10 attempts per 15 min per IP — covers brute-force on login + register
@@ -15,10 +15,21 @@ const authLimiter = rateLimit({
   message: { message: 'Too many attempts from this IP, please try again in 15 minutes' },
 });
 
-router.post('/register',     authLimiter, register);
-router.post('/login',        authLimiter, login);
-router.post('/refresh',                   refresh);
-router.post('/logout',                    logout);
-router.get ('/verify-email',              verifyEmail);
+// Tighter limit for password reset to prevent email flooding
+const resetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders:   false,
+  message: { message: 'Too many reset requests, please try again in an hour' },
+});
+
+router.post('/register',        authLimiter,  register);
+router.post('/login',           authLimiter,  login);
+router.post('/refresh',                       refresh);
+router.post('/logout',                        logout);
+router.get ('/verify-email',                  verifyEmail);
+router.post('/forgot-password', resetLimiter, forgotPassword);
+router.post('/reset-password',  resetLimiter, resetPassword);
 
 module.exports = router;

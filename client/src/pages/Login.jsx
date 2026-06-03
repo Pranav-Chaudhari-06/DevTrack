@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const { login } = useAuth();
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const successMsg = location.state?.message || '';
 
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
@@ -59,6 +61,15 @@ export default function Login() {
         >
           <h2 className="text-lg font-semibold text-slate-100 mb-6">Sign in to your account</h2>
 
+          {successMsg && (
+            <div
+              className="rounded-xl px-4 py-3 mb-5 text-sm text-green-400 animate-fade-in"
+              style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)' }}
+            >
+              {successMsg}
+            </div>
+          )}
+
           {error && (
             <div
               className="rounded-xl px-4 py-3 mb-5 text-sm text-red-400 animate-fade-in"
@@ -108,13 +119,15 @@ export default function Login() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-500">
+          <p className="mt-4 text-center">
+            <Link to="/forgot-password" className="text-xs text-slate-500 hover:text-slate-400">
+              Forgot your password?
+            </Link>
+          </p>
+
+          <p className="mt-4 text-center text-sm text-slate-500">
             Don't have an account?{' '}
-            <Link
-              to="/register"
-              className="font-semibold"
-              style={{ color: '#818cf8' }}
-            >
+            <Link to="/register" className="font-semibold" style={{ color: '#818cf8' }}>
               Register
             </Link>
           </p>
