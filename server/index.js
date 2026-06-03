@@ -36,6 +36,11 @@ const io = new Server(httpServer, {
 });
 socketManager.init(io);
 
+// Trust the first proxy hop (Render/Vercel/Fly/Nginx) so express-rate-limit
+// reads the real client IP from X-Forwarded-For instead of treating every
+// request as coming from the proxy.
+app.set('trust proxy', 1);
+
 // ── Express middleware ──────────────────────────────────────────────────────
 app.use(helmet());
 app.use(cors({ origin: allowedOrigins, credentials: true }));
