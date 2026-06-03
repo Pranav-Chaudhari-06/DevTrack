@@ -174,9 +174,15 @@ the built React bundle behind nginx. The frontend is reachable at
 {
   "severity": "critical",
   "suggested_tags": ["crash", "auth", "backend"],
-  "summary": "[CRITICAL] App crashes on login — NullPointerException in auth flow"
+  "summary": "[CRITICAL] App crashes on login — NullPointerException in auth flow",
+  "source": "llm"
 }
 ```
+
+`source` is `"llm"` when the analysis came from Claude Haiku 4.5 (set
+`ANTHROPIC_API_KEY` in the bug-service env) and `"keyword"` when the
+service fell back to keyword matching — either because no key is set or
+the API call failed.
 
 ---
 
@@ -189,7 +195,7 @@ the built React bundle behind nginx. The frontend is reachable at
 - **Kanban Board** — Open / In Progress / Resolved columns
 - **Task & Bug Tracking** — Tasks or bugs with priority, status, assignee, and threaded comments
 - **Realtime Notifications** — Socket.io push for assignments, status changes, and comments
-- **AI Bug Severity Analysis** — Keyword-based severity detection (critical/high/medium/low) via Django microservice
+- **AI Bug Severity Analysis** — Claude Haiku 4.5 analyzes title + description for severity, tags, and a one-line summary via a stateless Django microservice; gracefully falls back to keyword matching when no API key is configured
 - **Auto Priority** — Bug priority auto-fills based on severity analysis
 - **Clean UI** — Responsive Tailwind CSS design
 

@@ -30,9 +30,12 @@ server/coverage/
 .DS_Store
 Thumbs.db
 
-# Sensitive files
+# Sensitive files — Dev-Track Password.txt has plaintext creds.
+# *.txt is overly broad (would swallow requirements.txt etc.), so we carve
+# out exceptions for the files we genuinely want tracked.
 *.txt
 Dev-Track Password.txt
+!bug-service/requirements.txt
 
 # Editor
 .vscode/

@@ -15,6 +15,9 @@ services:
   bug-service:
     build: ./bug-service
     restart: unless-stopped
+    environment:
+      # Optional — without it the service silently falls back to keyword matching.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     expose:
       - "8000"
 
