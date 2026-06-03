@@ -1,15 +1,12 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import api from '../api/axios';
-import { useAuth } from '../context/AuthContext';
 
 export default function Register() {
-  const { login } = useAuth();
-  const navigate = useNavigate();
-
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [form,      setForm]      = useState({ name: '', email: '', password: '' });
+  const [error,     setError]     = useState('');
+  const [loading,   setLoading]   = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -18,9 +15,8 @@ export default function Register() {
     setError('');
     setLoading(true);
     try {
-      const { data } = await api.post('/api/auth/register', form);
-      login(data.token, data.user);
-      navigate('/');
+      await api.post('/api/auth/register', form);
+      setSubmitted(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
     } finally {
@@ -56,6 +52,20 @@ export default function Register() {
           className="glass rounded-2xl p-8"
           style={{ boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}
         >
+          {submitted ? (
+            <div className="text-center py-4">
+              <div className="text-4xl mb-4">📬</div>
+              <h2 className="text-lg font-semibold text-slate-100 mb-2">Check your email</h2>
+              <p className="text-slate-400 text-sm mb-6">
+                We sent a verification link to <span className="text-slate-200">{form.email}</span>.
+                Click it to activate your account — the link expires in 24 hours.
+              </p>
+              <Link to="/login" className="text-sm font-semibold" style={{ color: '#818cf8' }}>
+                Back to Sign In
+              </Link>
+            </div>
+          ) : (
+          <>
           <h2 className="text-lg font-semibold text-slate-100 mb-6">Create your account</h2>
 
           {error && (
@@ -110,7 +120,7 @@ export default function Register() {
                 required
                 minLength={6}
                 className="field w-full px-4 py-2.5 text-sm"
-                placeholder="Min. 6 characters"
+                placeholder="Min. 8 chars, upper, lower, number, special"
               />
             </div>
 
@@ -125,14 +135,12 @@ export default function Register() {
 
           <p className="mt-6 text-center text-sm text-slate-500">
             Already have an account?{' '}
-            <Link
-              to="/login"
-              className="font-semibold"
-              style={{ color: '#818cf8' }}
-            >
+            <Link to="/login" className="font-semibold" style={{ color: '#818cf8' }}>
               Sign in
             </Link>
           </p>
+          </>
+          )}
         </div>
       </div>
     </div>

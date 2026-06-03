@@ -3,6 +3,7 @@ const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const User         = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
+const { sendVerificationEmail } = require('../utils/email');
 
 const EMAIL_REGEX    = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
@@ -52,28 +53,33 @@ const register = async (req, res) => {
     const existing = await User.findOne({ email: email.toLowerCase().trim() });
     if (existing) return res.status(409).json({ message: 'Email already in use' });
 
+    // Generate email verification token (raw sent in email, hashed stored in DB)
+    const verificationToken       = crypto.randomBytes(32).toString('hex');
+    const verificationTokenHash   = hashToken(verificationToken);
+    const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+
     const hashed = await bcrypt.hash(password, 10);
-    const user = await User.create({
+    await User.create({
       name:  name.trim(),
       email: email.toLowerCase().trim(),
       password: hashed,
+      emailVerified:           false,
+      verificationToken:       verificationTokenHash,
+      verificationTokenExpiry,
     });
 
-    // Issue tokens straight away on register — email verification gate added later.
-    const accessToken  = signAccess(user);
-    const refreshToken = crypto.randomBytes(64).toString('hex');
-
-    await RefreshToken.create({
-      userId:    user._id,
-      tokenHash: hashToken(refreshToken),
-      expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
-    });
-
-    setRefreshCookie(res, refreshToken);
+    // Send verification email — if SMTP delivery fails, fall back to logging the URL
+    // so the account can still be verified manually in development.
+    const verifyUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
+    try {
+      await sendVerificationEmail(email.toLowerCase().trim(), name.trim(), verificationToken);
+    } catch (emailErr) {
+      console.warn('[register] Email delivery failed — verify manually via this URL:');
+      console.warn(verifyUrl);
+    }
 
     res.status(201).json({
-      token: accessToken,
-      user:  { id: user._id, name: user.name, email: user.email },
+      message: 'Account created! Please check your email to verify your account before signing in.',
     });
   } catch (err) {
     console.error(err);
@@ -94,6 +100,9 @@ const login = async (req, res) => {
 
     if (!user || !match)
       return res.status(401).json({ message: 'Invalid credentials' });
+
+    if (!user.emailVerified)
+      return res.status(403).json({ message: 'Please verify your email before signing in.' });
 
     const accessToken  = signAccess(user);
     const refreshToken = crypto.randomBytes(64).toString('hex');
@@ -167,4 +176,30 @@ const logout = async (req, res) => {
   res.json({ message: 'Logged out' });
 };
 
-module.exports = { register, login, refresh, logout };
+// ── GET /api/auth/verify-email?token=xxx ──────────────────────────────────────
+const verifyEmail = async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(400).json({ message: 'Token is required' });
+
+  try {
+    const user = await User.findOne({
+      verificationToken:       hashToken(token),
+      verificationTokenExpiry: { $gt: new Date() },
+    });
+
+    if (!user)
+      return res.status(400).json({ message: 'Verification link is invalid or has expired.' });
+
+    user.emailVerified           = true;
+    user.verificationToken       = undefined;
+    user.verificationTokenExpiry = undefined;
+    await user.save();
+
+    res.json({ message: 'Email verified! You can now sign in.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = { register, login, refresh, logout, verifyEmail };

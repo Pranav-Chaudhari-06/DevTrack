@@ -6,6 +6,7 @@ import Register      from './pages/Register';
 import Dashboard     from './pages/Dashboard';
 import ProjectDetail from './pages/ProjectDetail';
 import Analytics     from './pages/Analytics';
+import VerifyEmail   from './pages/VerifyEmail';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -36,8 +37,9 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             {/* Public */}
-            <Route path="/login"    element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/login"        element={<Login />} />
+            <Route path="/register"     element={<Register />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
 
             {/* Protected */}
             <Route path="/"

@@ -1,7 +1,10 @@
 const express    = require('express');
 const rateLimit  = require('express-rate-limit');
 const router     = express.Router();
-const { register, login, refresh, logout } = require('../controllers/authController');
+const {
+  register, login, refresh, logout,
+  verifyEmail,
+} = require('../controllers/authController');
 
 // 10 attempts per 15 min per IP — covers brute-force on login + register
 const authLimiter = rateLimit({
@@ -12,9 +15,10 @@ const authLimiter = rateLimit({
   message: { message: 'Too many attempts from this IP, please try again in 15 minutes' },
 });
 
-router.post('/register', authLimiter, register);
-router.post('/login',    authLimiter, login);
-router.post('/refresh',               refresh);
-router.post('/logout',                logout);
+router.post('/register',     authLimiter, register);
+router.post('/login',        authLimiter, login);
+router.post('/refresh',                   refresh);
+router.post('/logout',                    logout);
+router.get ('/verify-email',              verifyEmail);
 
 module.exports = router;
