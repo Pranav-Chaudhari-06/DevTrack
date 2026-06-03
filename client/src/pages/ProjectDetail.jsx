@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
@@ -65,14 +66,18 @@ export default function ProjectDetail() {
   const handleTaskCreated = (newTask) => {
     setTasks((prev) => [newTask, ...prev]);
     setShowTaskModal(false);
+    toast.success(`${newTask.type === 'bug' ? 'Bug' : 'Task'} created`);
   };
+
+  const STATUS_LABEL = { 'open': 'Open', 'in-progress': 'In Progress', 'resolved': 'Resolved' };
 
   const handleStatusChange = async (taskId, newStatus) => {
     try {
       const { data } = await api.patch(`/api/tasks/${taskId}`, { status: newStatus });
       setTasks((prev) => prev.map((t) => (t._id === taskId ? data : t)));
+      toast.success(`Moved to ${STATUS_LABEL[newStatus] || newStatus}`);
     } catch (err) {
-      console.error('Failed to update task:', err);
+      toast.error(err.response?.data?.message || 'Failed to update task');
     }
   };
 
@@ -80,8 +85,9 @@ export default function ProjectDetail() {
     try {
       await api.delete(`/api/tasks/${taskId}`);
       setTasks((prev) => prev.filter((t) => t._id !== taskId));
+      toast.success('Task deleted');
     } catch (err) {
-      console.error('Failed to delete task:', err);
+      toast.error(err.response?.data?.message || 'Failed to delete task');
     }
   };
 

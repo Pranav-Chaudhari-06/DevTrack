@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 import { getToken } from '../utils/tokenStore';
 import api from '../api/axios';
@@ -46,6 +47,8 @@ export function SocketProvider({ children }) {
     socket.on('notification', (notif) => {
       setNotifications((prev) => [notif, ...prev]);
       setUnreadCount((c) => c + 1);
+      // Surface as a toast so it doesn't sit invisible in the bell menu.
+      toast(notif.message);
     });
 
     socket.on('connect_error', (err) => {

@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import Login          from './pages/Login';
@@ -36,6 +37,15 @@ export default function App() {
   return (
     <AuthProvider>
       <SocketProvider>
+        <Toaster
+          position="bottom-right"
+          theme="dark"
+          richColors
+          closeButton
+          toastOptions={{
+            style: { background: '#0d1530', border: '1px solid rgba(255,255,255,0.1)' },
+          }}
+        />
         <BrowserRouter>
           <Routes>
             {/* Public */}
