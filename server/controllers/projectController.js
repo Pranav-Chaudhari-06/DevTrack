@@ -30,20 +30,27 @@ const createProject = async (req, res) => {
 const getProjects = async (req, res) => {
   try {
     // Find all projects where the user appears in the members array
-    const projects = await Project.find({ 'members.user': req.user.id }).sort({
-      createdAt: -1,
-    });
+    const projects = await Project.find({ 'members.user': req.user.id })
+      .sort({ createdAt: -1 })
+      .lean();
 
-    // Attach task count and the current user's role to each project
-    const projectsWithMeta = await Promise.all(
-      projects.map(async (project) => {
-        const taskCount = await Task.countDocuments({ project: project._id });
-        const member = project.members.find(
-          (m) => m.user.toString() === req.user.id
-        );
-        return { ...project.toObject(), taskCount, myRole: member?.role };
-      })
-    );
+    // One aggregation instead of N countDocuments calls
+    const counts = await Task.aggregate([
+      { $match: { project: { $in: projects.map((p) => p._id) } } },
+      { $group: { _id: '$project', n: { $sum: 1 } } },
+    ]);
+    const countByProject = new Map(counts.map((c) => [c._id.toString(), c.n]));
+
+    const projectsWithMeta = projects.map((project) => {
+      const member = project.members.find(
+        (m) => m.user.toString() === req.user.id
+      );
+      return {
+        ...project,
+        taskCount: countByProject.get(project._id.toString()) || 0,
+        myRole:    member?.role,
+      };
+    });
 
     res.json(projectsWithMeta);
   } catch (err) {
