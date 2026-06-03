@@ -116,6 +116,22 @@ Runs on **http://localhost:5173** — open this in your browser.
 
 ---
 
+### Or: one-command Docker
+
+If you'd rather not install Node/Python locally, the whole stack ships
+in `docker-compose.yml`:
+
+```bash
+cp .env.example .env       # then fill in JWT_SECRET
+docker compose up --build
+```
+
+This brings up MongoDB + the Django bug service + the Node API +
+the built React bundle behind nginx. The frontend is reachable at
+**http://localhost:5173**.
+
+---
+
 ## API Reference
 
 ### Auth
