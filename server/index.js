@@ -1,10 +1,11 @@
-const http         = require('http');
-const express      = require('express');
-const mongoose     = require('mongoose');
-const cors         = require('cors');
-const helmet       = require('helmet');
-const cookieParser = require('cookie-parser');
-const { Server }   = require('socket.io');
+const http           = require('http');
+const express        = require('express');
+const mongoose       = require('mongoose');
+const cors           = require('cors');
+const helmet         = require('helmet');
+const cookieParser   = require('cookie-parser');
+const mongoSanitize  = require('express-mongo-sanitize');
+const { Server }     = require('socket.io');
 require('dotenv').config();
 
 // ── Validate required environment variables on startup ───────────────────────
@@ -46,6 +47,10 @@ app.use(helmet());
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(cookieParser());
 app.use(express.json({ limit: '1mb' }));
+// Strip MongoDB operator keys ($gt, $ne, ...) and dotted keys from incoming
+// req.body / req.query / req.params so an attacker can't smuggle a query
+// operator where a string is expected (e.g. { email: { $gt: '' } }).
+app.use(mongoSanitize());
 
 // ── REST routes ─────────────────────────────────────────────────────────────
 app.use('/api/auth',          authRoutes);
