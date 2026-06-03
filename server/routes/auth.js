@@ -5,6 +5,14 @@ const {
   register, login, refresh, logout,
   verifyEmail, forgotPassword, resetPassword,
 } = require('../controllers/authController');
+const validate = require('../middleware/validate');
+const {
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  verifyEmailQuerySchema,
+} = require('../schemas/auth');
 
 // 10 attempts per 15 min per IP — covers brute-force on login + register
 const authLimiter = rateLimit({
@@ -24,12 +32,12 @@ const resetLimiter = rateLimit({
   message: { message: 'Too many reset requests, please try again in an hour' },
 });
 
-router.post('/register',        authLimiter,  register);
-router.post('/login',           authLimiter,  login);
-router.post('/refresh',                       refresh);
-router.post('/logout',                        logout);
-router.get ('/verify-email',                  verifyEmail);
-router.post('/forgot-password', resetLimiter, forgotPassword);
-router.post('/reset-password',  resetLimiter, resetPassword);
+router.post('/register',        authLimiter,  validate(registerSchema),                  register);
+router.post('/login',           authLimiter,  validate(loginSchema),                     login);
+router.post('/refresh',                                                                  refresh);
+router.post('/logout',                                                                   logout);
+router.get ('/verify-email',                  validate(verifyEmailQuerySchema, 'query'), verifyEmail);
+router.post('/forgot-password', resetLimiter, validate(forgotPasswordSchema),            forgotPassword);
+router.post('/reset-password',  resetLimiter, validate(resetPasswordSchema),             resetPassword);
 
 module.exports = router;

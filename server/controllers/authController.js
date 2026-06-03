@@ -6,8 +6,7 @@ const User         = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/email');
 
-const EMAIL_REGEX    = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+// Request bodies are validated upstream by zod schemas wired in routes/auth.js.
 
 const REFRESH_COOKIE = 'devtrack_refresh';
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -42,21 +41,12 @@ function setRefreshCookie(res, token) {
 
 // ── POST /api/auth/register ───────────────────────────────────────────────────
 const register = async (req, res) => {
+  // name/email/password are already trimmed + validated by the zod schema.
   const { name, email, password } = req.body;
-
-  if (!name || !email || !password)
-    return res.status(400).json({ message: 'All fields are required' });
-  if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 100)
-    return res.status(400).json({ message: 'Name must be between 2 and 100 characters' });
-  if (!EMAIL_REGEX.test(email))
-    return res.status(400).json({ message: 'Invalid email address' });
-  if (!PASSWORD_REGEX.test(password))
-    return res.status(400).json({
-      message: 'Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character',
-    });
+  const normalisedEmail = email.toLowerCase();
 
   try {
-    const existing = await User.findOne({ email: email.toLowerCase().trim() });
+    const existing = await User.findOne({ email: normalisedEmail });
     if (existing) return res.status(409).json({ message: 'Email already in use' });
 
     // Generate email verification token (raw sent in email, hashed stored in DB)
@@ -66,8 +56,8 @@ const register = async (req, res) => {
 
     const hashed = await bcrypt.hash(password, 10);
     await User.create({
-      name:  name.trim(),
-      email: email.toLowerCase().trim(),
+      name,
+      email: normalisedEmail,
       password: hashed,
       emailVerified:           false,
       verificationToken:       verificationTokenHash,
@@ -78,7 +68,7 @@ const register = async (req, res) => {
     // so the account can still be verified manually in development.
     const verifyUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
     try {
-      await sendVerificationEmail(email.toLowerCase().trim(), name.trim(), verificationToken);
+      await sendVerificationEmail(normalisedEmail, name, verificationToken);
     } catch (emailErr) {
       console.warn('[register] Email delivery failed — verify manually via this URL:');
       console.warn(verifyUrl);
@@ -97,11 +87,8 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password)
-    return res.status(400).json({ message: 'Email and password are required' });
-
   try {
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const user = await User.findOne({ email: email.toLowerCase() });
 
     // Reject unknown email without any DB write — preserves enumeration
     // resistance and avoids racking up a lockout on a non-existent account.
@@ -235,7 +222,6 @@ const logout = async (req, res) => {
 // ── GET /api/auth/verify-email?token=xxx ──────────────────────────────────────
 const verifyEmail = async (req, res) => {
   const { token } = req.query;
-  if (!token) return res.status(400).json({ message: 'Token is required' });
 
   try {
     const user = await User.findOne({
@@ -261,13 +247,12 @@ const verifyEmail = async (req, res) => {
 // ── POST /api/auth/forgot-password ───────────────────────────────────────────
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
-  if (!email) return res.status(400).json({ message: 'Email is required' });
 
   // Always return the same message to prevent email enumeration
   const SAFE_RESPONSE = { message: 'If an account with that email exists, a reset link has been sent.' };
 
   try {
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) return res.json(SAFE_RESPONSE);
 
     const resetToken       = crypto.randomBytes(32).toString('hex');
@@ -287,13 +272,6 @@ const forgotPassword = async (req, res) => {
 // ── POST /api/auth/reset-password ────────────────────────────────────────────
 const resetPassword = async (req, res) => {
   const { token, password } = req.body;
-  if (!token || !password)
-    return res.status(400).json({ message: 'Token and new password are required' });
-
-  if (!PASSWORD_REGEX.test(password))
-    return res.status(400).json({
-      message: 'Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character',
-    });
 
   try {
     const user = await User.findOne({
