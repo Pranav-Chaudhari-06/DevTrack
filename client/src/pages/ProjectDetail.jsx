@@ -216,6 +216,7 @@ export default function ProjectDetail() {
       {showTaskModal && (
         <CreateTaskModal
           projectId={id}
+          members={project?.members || []}
           onClose={() => setShowTaskModal(false)}
           onCreated={handleTaskCreated}
         />

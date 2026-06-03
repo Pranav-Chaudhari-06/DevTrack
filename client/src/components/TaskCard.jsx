@@ -32,19 +32,14 @@ const IconTrash = () => (
  * Determines whether the current user may act on this task.
  *
  * Admin     → can act on any task
- * Developer → can only act on tasks assigned to them (by email or name)
+ * Developer → can only act on tasks assigned to them
  * Viewer    → cannot act at all
  */
 function canActOnTask(task, myRole, currentUser) {
   if (!myRole || myRole === 'viewer') return false;
   if (myRole === 'admin') return true;
   if (myRole === 'developer') {
-    if (!task.assignedTo) return false;
-    const assigned = task.assignedTo.toLowerCase().trim();
-    return (
-      assigned === currentUser?.email?.toLowerCase() ||
-      assigned === currentUser?.name?.toLowerCase()
-    );
+    return !!task.assignedTo && task.assignedTo === currentUser?.id;
   }
   return false;
 }
@@ -142,9 +137,9 @@ export default function TaskCard({ task, myRole, currentUser, onStatusChange, on
       })()}
 
       {/* Assignee */}
-      {task.assignedTo && (
+      {task.assigneeName && (
         <p className="text-xs text-slate-600 mb-3">
-          → <span className="text-slate-400">{task.assignedTo}</span>
+          → <span className="text-slate-400">{task.assigneeName}</span>
         </p>
       )}
 

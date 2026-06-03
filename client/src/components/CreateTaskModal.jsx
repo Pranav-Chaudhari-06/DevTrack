@@ -19,7 +19,7 @@ const SEVERITY_CONFIG = {
   low:      { bg: 'rgba(100,116,139,0.2)', color: '#94a3b8', label: 'LOW'      },
 };
 
-export default function CreateTaskModal({ projectId, onClose, onCreated }) {
+export default function CreateTaskModal({ projectId, members = [], onClose, onCreated }) {
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -269,14 +269,19 @@ export default function CreateTaskModal({ projectId, onClose, onCreated }) {
             {/* Assignee */}
             <div>
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Assigned To</label>
-              <input
-                type="text"
+              <select
                 name="assignedTo"
                 value={form.assignedTo}
                 onChange={handleChange}
-                className="field w-full px-4 py-2.5 text-sm"
-                placeholder="Name or email (optional)"
-              />
+                className="field w-full px-3 py-2.5 text-sm"
+              >
+                <option value="">Unassigned</option>
+                {members.map((m) => (
+                  <option key={m.user._id} value={m.user._id}>
+                    {m.user.name} ({m.role})
+                  </option>
+                ))}
+              </select>
             </div>
           </form>
         </div>

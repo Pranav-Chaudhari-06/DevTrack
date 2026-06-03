@@ -44,10 +44,17 @@ const taskSchema = new mongoose.Schema({
     enum: ['open', 'in-progress', 'resolved'],
     default: 'open',
   },
+  // Reference to the assigned User. Was previously a free-text name/email
+  // string — see scripts/migrate-assignee.js to backfill existing data.
   assignedTo: {
-    type: String,
-    trim: true,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
   },
+  // Denormalised user name for read-heavy paths (analytics, task list) so we
+  // don't need a populate on every read. Same trade-off as comment.authorName:
+  // accepts staleness on user rename in exchange for cheaper queries.
+  assigneeName: { type: String, default: null },
   project: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Project',
@@ -77,5 +84,8 @@ const taskSchema = new mongoose.Schema({
 //  - listing/aggregating tasks for one project (always sorted newest-first)
 //  - counting tasks per project for the dashboard project list
 taskSchema.index({ project: 1, createdAt: -1 });
+
+// Covers "tasks assigned to me" / per-user dashboards.
+taskSchema.index({ assignedTo: 1 });
 
 module.exports = mongoose.model('Task', taskSchema);

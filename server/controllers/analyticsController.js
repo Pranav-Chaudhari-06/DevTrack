@@ -14,7 +14,7 @@ const getAnalytics = async (req, res) => {
 
     // Fetch everything we need in one query
     const allTasks = await Task.find({ project: projectId })
-      .select('type status priority assignedTo createdAt resolvedAt')
+      .select('type status priority assignedTo assigneeName createdAt resolvedAt')
       .lean();
 
     const now = new Date();
@@ -89,14 +89,11 @@ const getAnalytics = async (req, res) => {
     }
 
     // ── 5. Tasks per assignee (top 10) ───────────────────────────────────────
+    // assigneeName is denormalised on the Task so we don't need to join.
     const assigneeMap = {};
     allTasks.forEach((t) => {
-      if (!t.assignedTo) return;
-      // For emails like "alice@test.com" use the local part; for names use as-is
-      const label = t.assignedTo.includes('@')
-        ? t.assignedTo.split('@')[0]
-        : t.assignedTo;
-      assigneeMap[label] = (assigneeMap[label] || 0) + 1;
+      if (!t.assignedTo || !t.assigneeName) return;
+      assigneeMap[t.assigneeName] = (assigneeMap[t.assigneeName] || 0) + 1;
     });
 
     const assigneeDist = Object.entries(assigneeMap)
